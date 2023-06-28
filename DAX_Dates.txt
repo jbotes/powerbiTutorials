@@ -1,0 +1,35 @@
+Dim_Holding_Date = 
+VAR FirstFiscalMonth = 7  -- First month of fiscal year
+VAR FirstDayOfWeek = 0    -- 0 = Sunday, 1 = Monday, ...
+VAR FirstYear =           -- Customize first year to use
+    YEAR ( MIN ( 'Fact_Holdings'[PortfolioDate]  ))
+RETURN
+GENERATE (
+    FILTER (
+        CALENDARAUTO (),
+        YEAR ( [Date] ) >= FirstYear
+    ),
+    VAR Yr = YEAR ( [Date] )             -- Year Number
+    VAR Mn = MONTH ( [Date] )            -- Month Number (1-12)
+    VAR Qr = QUARTER ( [Date] )          -- Quarter Number (1-4)
+    VAR MnQ = Mn - 3 * (Qr - 1)          -- Month in Quarter (1-3)
+    VAR Wd = WEEKDAY ( [Date], 1 ) - 1   -- Week day number (0 = Sunday, 1 = Monday, ...)
+    VAR Fyr =                            -- Fiscal Year Number
+        Yr + 1 * ( FirstFiscalMonth > 1 && Mn >= FirstFiscalMonth )
+    VAR Fqr =                            -- Fiscal Quarter (string)
+        FORMAT ( EOMONTH ( [Date], 1 - FirstFiscalMonth ), "\QQ" )
+    RETURN ROW (
+        "Year", DATE ( Yr, 12, 31 ),
+        "Year Quarter", FORMAT ( [Date], "\QQ-YYYY" ),
+        "Year Quarter Date", EOMONTH ( [Date], 3 - MnQ ),
+        "Quarter", FORMAT ( [Date], "\QQ" ),
+        -- "Year Month", EOMONTH ( [Date], 0 ), -- use this for end-of-month
+        "Year Month", EOMONTH ( [Date], -1 ) + 1, -- use this for beginning-of-month
+        "Month", DATE ( 1900, MONTH ( [Date] ), 1 ),
+        "Day of Week", DATE ( 1900, 1, 7 + Wd + (7 * (Wd < FirstDayOfWeek)) ),
+        "Fiscal Year", DATE ( Fyr + (FirstFiscalMonth = 1), FirstFiscalMonth, 1 ) - 1,
+        "Fiscal Year Quarter", "F" & Fqr & "-" & Fyr,
+        "Fiscal Year Quarter Date", EOMONTH ( [Date], 3 - MnQ ),
+        "Fiscal Quarter", "F" & Fqr
+    )
+)
